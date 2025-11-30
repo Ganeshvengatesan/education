@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import apiService from '../utils/api';
 
 // Inline SVG Icons (no lucide-react!)
 const UploadIcon = () => (
@@ -24,6 +25,7 @@ const XIcon = () => (
 function PDFUpload({ theme = 'light', setExtractedText }) {
   const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDragOver = (e) => {
@@ -53,13 +55,18 @@ function PDFUpload({ theme = 'light', setExtractedText }) {
     }
   };
 
-  const handleFile = (selectedFile) => {
+  const handleFile = async (selectedFile) => {
     setFile(selectedFile);
-    setExtractedText(
-      `Extracted content from: ${selectedFile.name}\n\n` +
-      `File size: ${(selectedFile.size / 1024).toFixed(2)} KB\n\n` +
-      `This is a demo. In production, PDF text would be extracted here using pdf.js, pdf-parse, or a backend service.`
-    );
+    setIsUploading(true);
+
+    try {
+      const response = await apiService.uploadFile(selectedFile);
+      setExtractedText(response.extractedText);
+    } catch (error) {
+      setExtractedText(`Error extracting text: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const clearFile = () => {

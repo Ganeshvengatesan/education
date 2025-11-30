@@ -10,7 +10,7 @@ function MainWorkspace({
   onSendToAI 
 }) {
   const [settings, setSettings] = useState({
-    answerType: 'simple',
+    answerType: 'explanation',
     highlightKeywords: true,
     includeExamples: true,
     includeCodeSnippets: false,

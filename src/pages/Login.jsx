@@ -1,31 +1,38 @@
 // src/pages/Login.jsx
 import React, { useState } from 'react';
 import { Mail, Lock, LogIn } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';   // ← ADD useNavigate
+import { Link, useNavigate } from 'react-router-dom';
+import apiService from '../utils/api';
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  
-  const navigate = useNavigate();   // ← This enables navigation
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    // Static Demo Credentials
-    if (email === 'ganesh@gmail.com' && password === 'admin@123') {
-      // Success → Save user + Navigate to Dashboard
-      const userData = { email: 'ganesh@gmail.com', name: 'Ganesh Kumar' };
-      
-      // Call parent function (saves to localStorage)
-      if (onLogin) onLogin(userData);
+    try {
+      const response = await apiService.login({ email, password });
 
-      // Instantly go to Dashboard
+      // Save token and user data
+      localStorage.setItem('ai-knowledge-token', response.data.token);
+      localStorage.setItem('ai-knowledge-user', JSON.stringify(response.data.user));
+
+      // Call parent function
+      if (onLogin) onLogin(response.data.user);
+
+      // Navigate to Dashboard
       navigate('/dashboard', { replace: true });
-    } else {
-      setError('Invalid credentials. Use: ganesh@gmail.com / admin@123');
+    } catch (error) {
+      setError(error.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,15 +47,6 @@ function Login({ onLogin }) {
             </div>
             <h1 className="text-3xl font-bold text-slate-900">Welcome Back</h1>
             <p className="text-slate-600 mt-2">Sign in to continue</p>
-          </div>
-
-          {/* Demo Credentials Box */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-200 rounded-xl text-center">
-            <p className="text-sm font-bold text-indigo-800">Demo Login</p>
-            <p className="text-xs text-indigo-700 mt-1">
-              Email: <strong>ganesh@gmail.com</strong><br />
-              Password: <strong>admin@123</strong>
-            </p>
           </div>
 
           {error && (

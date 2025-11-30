@@ -1,13 +1,36 @@
 import React, { useState } from 'react';
 import { User, Mail, Lock, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import apiService from '../utils/api';
 
-function Register({ setUser }) {
+function Register({ onLogin }) {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    setUser({ email: formData.email, name: formData.name });
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await apiService.register(formData);
+
+      // Save token and user data
+      localStorage.setItem('ai-knowledge-token', response.token);
+      localStorage.setItem('ai-knowledge-user', JSON.stringify(response.user));
+
+      // Call parent function
+      if (onLogin) onLogin(response.user);
+
+      // Navigate to Dashboard
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      setError(error.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

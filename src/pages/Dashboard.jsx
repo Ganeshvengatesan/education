@@ -4,6 +4,7 @@ import { LogOut } from 'lucide-react';
 import Header from '../components/Header';
 import MainWorkspace from '../components/MainWorkspace';
 import AIResponseSection from '../components/AIResponseSection';
+import apiService from '../utils/api';
 
 function Dashboard({ user, onLogout }) {
   const [theme, setTheme] = useState('light');
@@ -19,30 +20,17 @@ function Dashboard({ user, onLogout }) {
     setIsGenerating(true);
     setAiResponse('');
 
-    await new Promise(r => setTimeout(r, 2500));
+    try {
+      // Use the extracted text as context and a default question
+      const question = "Please analyze and explain this content";
+      const response = await apiService.generateAnswer(question, text, settings.answerType);
 
-    setAiResponse(`
-# AI Response Ready
-
-**Hello ${user.name || user.email.split('@')[0]}!**
-
-Your content has been analyzed with the following settings:
-
-- **Style**: ${settings.answerType}
-- **Highlight Keywords**: ${settings.highlightKeywords ? 'Yes' : 'No'}
-- **Include Examples**: ${settings.includeExamples ? 'Yes' : 'No'}
-- **Code Snippets**: ${settings.includeCodeSnippets ? 'Yes' : 'No'}
-
-\`\`\`javascript
-console.log("AI Knowledge Extractor is running!");
-\`\`\`
-
-This is a **fully functional demo**. Connect to OpenAI, Claude, Gemini, or your own backend to get real AI responses.
-
-You're all set!
-    `.trim());
-
-    setIsGenerating(false);
+      setAiResponse(response.data.answer);
+    } catch (error) {
+      setAiResponse(`Error: ${error.message || 'Failed to generate AI response'}`);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (

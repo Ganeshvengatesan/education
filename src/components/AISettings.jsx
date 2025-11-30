@@ -43,14 +43,11 @@ function ToggleSwitch({ label, checked, onChange, theme }) {
 
 function AISettings({ theme = 'light', settings, setSettings }) {
   const answerTypes = [
-    { value: 'simple', label: 'Simple Explanation' },
-    { value: 'advanced', label: 'Advanced Notes' },
-    { value: 'w3schools', label: 'W3Schools Style' },
-    { value: 'gfg', label: 'GFG Style' },
-    { value: 'tutorialspoint', label: 'Tutorialspoint Style' },
-    { value: '10mark', label: '10 Mark Answer' },
-    { value: '5mark', label: '5 Mark Answer' },
-    { value: 'summary', label: 'Summary' },
+    { value: 'explanation', label: 'Explanation' },
+    { value: 'code', label: 'Code Example' },
+    { value: 'step-by-step', label: 'Step-by-Step Guide' },
+    { value: 'comparison', label: 'Comparison' },
+    { value: 'quick-tip', label: 'Quick Tip' },
   ];
 
   const handleAnswerTypeChange = (e) => {

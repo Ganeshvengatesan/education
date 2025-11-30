@@ -45,17 +45,18 @@ function ScreenshotUpload({ theme = 'light', setExtractedText }) {
     }
   };
 
-  const processImage = (file) => {
+  const processImage = async (file) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const base64 = e.target?.result;
       setImage(base64);
-      setExtractedText(
-        `OCR extracted text from: ${file.name}\n\n` +
-        `Image size: ${(file.size / 1024).toFixed(1)} KB\n` +
-        `Resolution: Ready for OCR\n\n` +
-        `This is a demo. In production, text would be extracted using Tesseract.js, Google Vision, AWS Textract, or a backend OCR service.`
-      );
+
+      try {
+        const response = await apiService.uploadFile(file);
+        setExtractedText(response.extractedText);
+      } catch (error) {
+        setExtractedText(`Error extracting text: ${error.message}`);
+      }
     };
     reader.readAsDataURL(file);
   };

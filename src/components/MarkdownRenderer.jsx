@@ -28,20 +28,53 @@ function MarkdownRenderer({ content = '', theme = 'light' }) {
   };
 
   const processInline = (text) => {
-    const parts = text
-      .replace(/\*\*(.*?)\*\*/g, '||$1||')
-      .replace(/\*(.*?)\*/g, '|$1|')
-      .replace(/`(.*?)`/g, '~$1~')
-      .split(/(\|\||\|~|~|\|)/)
-      .filter(Boolean);
+    const parts = [];
+    let current = '';
+    let inBold = false;
+    let inItalic = false;
+    let inCode = false;
+
+    for (let i = 0; i < text.length; i++) {
+      if (text.slice(i, i + 2) === '**') {
+        if (current) {
+          parts.push({ text: current, bold: inBold, italic: inItalic, code: inCode });
+          current = '';
+        }
+        inBold = !inBold;
+        i += 1;
+      } else if (text[i] === '*' && !inCode) {
+        if (current) {
+          parts.push({ text: current, bold: inBold, italic: inItalic, code: inCode });
+          current = '';
+        }
+        inItalic = !inItalic;
+      } else if (text[i] === '`') {
+        if (current) {
+          parts.push({ text: current, bold: inBold, italic: inItalic, code: inCode });
+          current = '';
+        }
+        inCode = !inCode;
+      } else {
+        current += text[i];
+      }
+    }
+
+    if (current) {
+      parts.push({ text: current, bold: inBold, italic: inItalic, code: inCode });
+    }
 
     return parts.map((part, i) => {
-      if (part === '||') return <strong key={i} className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`} />;
-      if (part === '|') return <em key={i} className="italic text-indigo-400" />;
-      if (part === '~') return <code key={i} className={`px-1.5 py-0.5 rounded text-sm font-mono ${theme === 'dark' ? 'bg-slate-800 text-indigo-300' : 'bg-slate-200 text-indigo-700'}`} />;
-      if (part.match(/^\|\||\|~|~$/)) return null;
-      
-      return part;
+      let element = part.text;
+      if (part.code) {
+        element = <code key={i} className={`px-1.5 py-0.5 rounded text-sm font-mono ${theme === 'dark' ? 'bg-slate-800 text-indigo-300' : 'bg-slate-200 text-indigo-700'}`}>{element}</code>;
+      }
+      if (part.italic) {
+        element = <em key={i} className="italic text-indigo-400">{element}</em>;
+      }
+      if (part.bold) {
+        element = <strong key={i} className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{element}</strong>;
+      }
+      return element;
     });
   };
 

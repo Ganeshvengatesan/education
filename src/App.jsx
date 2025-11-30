@@ -18,8 +18,13 @@ function App() {
   // Check if user is already logged in (e.g., from localStorage)
   useEffect(() => {
     const savedUser = localStorage.getItem('ai-knowledge-user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    if (savedUser && savedUser !== 'undefined') {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error('Error parsing saved user data:', error);
+        localStorage.removeItem('ai-knowledge-user');
+      }
     }
     setLoading(false);
   }, []);
@@ -41,6 +46,12 @@ function App() {
     setUser(null);
   };
 
+  // Helper function to check if user is authenticated
+  const isAuthenticated = () => {
+    const savedUser = localStorage.getItem('ai-knowledge-user');
+    return savedUser && savedUser !== 'undefined' && savedUser !== null;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
@@ -53,20 +64,20 @@ function App() {
     <Router>
       <Routes>
         {/* Public Routes */}
-        <Route path="/login" element={<Login onLogin={handleLogin} />} />
+        <Route path="/login" element={isAuthenticated() ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />} />
         <Route
           path="/register"
-          element={user ? <Navigate to="/dashboard" replace /> : <Register onRegister={handleLogin} />}
+          element={isAuthenticated() ? <Navigate to="/dashboard" replace /> : <Register onRegister={handleLogin} />}
         />
 
         {/* Protected Route */}
         <Route
           path="/dashboard"
-          element={user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+          element={isAuthenticated() ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />}
         />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
+        <Route path="*" element={<Navigate to={isAuthenticated() ? '/dashboard' : '/login'} replace />} />
       </Routes>
     </Router>
   );
