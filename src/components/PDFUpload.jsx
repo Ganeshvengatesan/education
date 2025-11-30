@@ -61,7 +61,7 @@ function PDFUpload({ theme = 'light', setExtractedText }) {
 
     try {
       const response = await apiService.uploadFile(selectedFile);
-      setExtractedText(response.extractedText);
+      setExtractedText(response.data.extractedText);
     } catch (error) {
       setExtractedText(`Error extracting text: ${error.message}`);
     } finally {

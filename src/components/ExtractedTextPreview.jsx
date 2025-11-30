@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 // Inline SVG Icons (no dependencies)
 const TrashIcon = () => (
@@ -16,6 +16,7 @@ const SendIcon = () => (
 );
 
 function ExtractedTextPreview({ theme = 'light', text = '', onClear, onSend }) {
+  const [question, setQuestion] = useState('');
   // Count words (ignores extra whitespace)
   const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).filter(Boolean).length;
 
@@ -61,10 +62,28 @@ function ExtractedTextPreview({ theme = 'light', text = '', onClear, onSend }) {
         )}
       </div>
 
+      {/* Question Input */}
+      <div className="p-5 border-b border-slate-200 dark:border-slate-700">
+        <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>
+          Ask a question about this content:
+        </label>
+        <input
+          type="text"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="e.g., Explain this concept, What does this mean?, Summarize this..."
+          className={`w-full px-4 py-3 rounded-lg border transition-all focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+            theme === 'dark'
+              ? 'bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-400'
+              : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'
+          }`}
+        />
+      </div>
+
       {/* Send Button */}
       <div className="p-5">
         <button
-          onClick={onSend}
+          onClick={() => onSend(question || "Please analyze and explain this content")}
           disabled={!text.trim()}
           className={`w-full py-3.5 px-6 rounded-xl font-semibold text-white shadow-lg transition-all duration-300 flex items-center justify-center gap-2.5
             bg-gradient-to-r from-indigo-500 via-purple-500 to-violet-600
@@ -75,7 +94,7 @@ function ExtractedTextPreview({ theme = 'light', text = '', onClear, onSend }) {
           `}
         >
           <SendIcon />
-          Send to AI
+          Ask AI
         </button>
       </div>
     </div>

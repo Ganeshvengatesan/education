@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import apiService from '../utils/api';
 
 // Inline SVG Icons (no lucide-react!)
 const ImageIcon = () => (
@@ -14,9 +15,11 @@ const XIcon = () => (
   </svg>
 );
 
-function ScreenshotUpload({ theme = 'light', setExtractedText }) {
+function ScreenshotUpload({ theme = 'light', setExtractedText, onSendToAI, extractedText, onSend }) {
   const [image, setImage] = useState(null); // base64 string
+  const [question, setQuestion] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDragOver = (e) => {
@@ -50,12 +53,15 @@ function ScreenshotUpload({ theme = 'light', setExtractedText }) {
     reader.onload = async (e) => {
       const base64 = e.target?.result;
       setImage(base64);
+      setIsExtracting(true);
 
       try {
         const response = await apiService.uploadFile(file);
-        setExtractedText(response.extractedText);
+        setExtractedText(response.data.extractedText);
       } catch (error) {
         setExtractedText(`Error extracting text: ${error.message}`);
+      } finally {
+        setIsExtracting(false);
       }
     };
     reader.readAsDataURL(file);
@@ -65,6 +71,7 @@ function ScreenshotUpload({ theme = 'light', setExtractedText }) {
     setImage(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setExtractedText('');
+    setQuestion('');
   };
 
   return (
@@ -135,13 +142,43 @@ function ScreenshotUpload({ theme = 'light', setExtractedText }) {
             </button>
           </div>
 
+          {/* Question Input */}
           <div className={`p-5 rounded-xl border ${theme === 'dark' ? 'bg-slate-800/70 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-            <p className={`text-sm font-semibold ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>
-              OCR Processing Status
-            </p>
-            <p className={`text-sm mt-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-              Image uploaded successfully • Ready for text extraction via OCR
-            </p>
+            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>
+              Ask a question about this screenshot:
+            </label>
+            <input
+              type="text"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder="e.g., Explain this concept, What does this mean?, Summarize this..."
+              className={`w-full px-4 py-3 rounded-lg border transition-all focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                theme === 'dark'
+                  ? 'bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-400'
+                  : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'
+              }`}
+            />
+          </div>
+
+          {/* Ask AI Button */}
+          <div className="px-5">
+            <button
+              onClick={() => onSend(question || "Please analyze and explain this screenshot")}
+              disabled={!extractedText.trim()}
+              className={`w-full py-3.5 px-6 rounded-xl font-semibold text-white shadow-lg transition-all duration-300 flex items-center justify-center gap-2.5
+                bg-gradient-to-r from-indigo-500 via-purple-500 to-violet-600
+                hover:from-indigo-600 hover:via-purple-600 hover:to-violet-700
+                active:scale-98
+                disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100
+                focus:outline-none focus:ring-4 focus:ring-purple-500/30
+              `}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+              Ask AI
+            </button>
           </div>
         </div>
       )}
