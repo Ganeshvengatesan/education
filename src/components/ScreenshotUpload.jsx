@@ -57,9 +57,18 @@ function ScreenshotUpload({ theme = 'light', setExtractedText, onSendToAI, extra
 
       try {
         const response = await apiService.uploadFile(file);
-        setExtractedText(response.data.extractedText);
+        if (response.data && response.data.extractedText) {
+          setExtractedText(response.data.extractedText);
+        } else {
+          throw new Error('No text extracted from image');
+        }
       } catch (error) {
-        setExtractedText(`Error extracting text: ${error.message}`);
+        console.error('Image processing error:', error);
+        alert(`Error: ${error.message || 'Failed to extract text from image. Please try again.'}`);
+        setImage(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       } finally {
         setIsExtracting(false);
       }

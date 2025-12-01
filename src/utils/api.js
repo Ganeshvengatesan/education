@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://education-backend-l1sy.onrender.com/api';
 
 class ApiService {
   constructor() {
@@ -23,14 +23,33 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        // Handle different error types
+        if (response.status === 401) {
+          // Unauthorized - clear token and redirect to login
+          localStorage.removeItem('ai-knowledge-token');
+          localStorage.removeItem('ai-knowledge-user');
+          throw new Error('Session expired. Please login again.');
+        }
+        
+        const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
       }
 
-      return await response.json();
+      // Validate response structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response format from server');
+      }
+
+      return data;
     } catch (error) {
+      // Network errors
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      
       console.error('API request failed:', error);
       throw error;
     }
@@ -38,17 +57,32 @@ class ApiService {
 
   // Auth methods
   async login(credentials) {
+    const formData = new URLSearchParams();
+    formData.append('email', credentials.email);
+    formData.append('password', credentials.password);
+
     const response = await this.request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify(credentials),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString(),
     });
     return response;
   }
 
   async register(userData) {
+    const formData = new URLSearchParams();
+    formData.append('name', userData.name);
+    formData.append('email', userData.email);
+    formData.append('password', userData.password);
+
     const response = await this.request('/auth/register', {
       method: 'POST',
-      body: JSON.stringify(userData),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString(),
     });
     return response;
   }
@@ -59,20 +93,40 @@ class ApiService {
     formData.append('file', file);
 
     const token = localStorage.getItem('ai-knowledge-token');
-    const response = await fetch(`${this.baseURL}/upload/file`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    
+    try {
+      const response = await fetch(`${this.baseURL}/upload/file`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Upload failed: ${response.status}`);
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('ai-knowledge-token');
+          localStorage.removeItem('ai-knowledge-user');
+          throw new Error('Session expired. Please login again.');
+        }
+        
+        const errorMessage = data.message || data.error || `Upload failed: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response format from server');
+      }
+
+      return data;
+    } catch (error) {
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      throw error;
     }
-
-    return await response.json();
   }
 
   async uploadText(text) {

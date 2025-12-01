@@ -14,17 +14,27 @@ function Dashboard({ user, onLogout }) {
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   const handleSendToAI = async (question, text, settings) => {
-    if (!text.trim()) return;
+    if (!text.trim()) {
+      alert('Please provide some content to analyze');
+      return;
+    }
 
     setIsGenerating(true);
     setAiResponse('');
 
     try {
       const response = await apiService.generateAnswer(question, text, settings.answerType);
-      setAiResponse(response.data.answer);
-      setActiveView('response');
+      if (response.data && response.data.answer) {
+        setAiResponse(response.data.answer);
+        setActiveView('response');
+      } else {
+        throw new Error('No answer received from AI');
+      }
     } catch (error) {
-      setAiResponse(`Error: ${error.message || 'Failed to generate AI response'}`);
+      console.error('AI generation error:', error);
+      const errorMessage = error.message || 'Failed to generate AI response. Please try again.';
+      setAiResponse(`**Error:** ${errorMessage}\n\nPlease check your connection and try again.`);
+      setActiveView('response');
     } finally {
       setIsGenerating(false);
     }

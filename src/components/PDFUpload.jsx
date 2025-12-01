@@ -61,9 +61,18 @@ function PDFUpload({ theme = 'light', setExtractedText }) {
 
     try {
       const response = await apiService.uploadFile(selectedFile);
-      setExtractedText(response.data.extractedText);
+      if (response.data && response.data.extractedText) {
+        setExtractedText(response.data.extractedText);
+      } else {
+        throw new Error('No text extracted from file');
+      }
     } catch (error) {
-      setExtractedText(`Error extracting text: ${error.message}`);
+      console.error('File upload error:', error);
+      alert(`Error: ${error.message || 'Failed to extract text from file. Please try again.'}`);
+      setFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } finally {
       setIsUploading(false);
     }

@@ -18,16 +18,17 @@ function Register({ onLogin }) {
       const response = await apiService.register(formData);
 
       // Save token and user data
-      localStorage.setItem('ai-knowledge-token', response.token);
-      localStorage.setItem('ai-knowledge-user', JSON.stringify(response.user));
+      localStorage.setItem('ai-knowledge-token', response.data.token);
+      localStorage.setItem('ai-knowledge-user', JSON.stringify(response.data.user));
 
       // Call parent function
-      if (onLogin) onLogin(response.user);
+      if (onLogin) onLogin(response.data.user);
 
       // Navigate to Dashboard
       navigate('/dashboard', { replace: true });
     } catch (error) {
-      setError(error.message || 'Registration failed. Please try again.');
+      console.error('Registration error:', error);
+      setError(error.message || 'Registration failed. Please check your information and try again.');
     } finally {
       setLoading(false);
     }

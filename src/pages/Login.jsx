@@ -30,7 +30,8 @@ function Login({ onLogin }) {
       // Navigate to Dashboard
       navigate('/dashboard', { replace: true });
     } catch (error) {
-      setError(error.message || 'Login failed. Please try again.');
+      console.error('Login error:', error);
+      setError(error.message || 'Login failed. Please check your credentials and try again.');
     } finally {
       setLoading(false);
     }
