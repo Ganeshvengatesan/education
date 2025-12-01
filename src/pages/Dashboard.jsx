@@ -5,7 +5,7 @@ import AIResponseSection from '../components/AIResponseSection';
 import apiService from '../utils/api';
 
 function Dashboard({ user, onLogout }) {
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState('dark');
   const [extractedText, setExtractedText] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -80,10 +80,10 @@ function Dashboard({ user, onLogout }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Workspace Column */}
-          <div className={`lg:col-span-2 transition-all duration-300 ${
-            activeView === 'response' ? 'lg:block hidden' : 'block'
+        <div className="space-y-8">
+          {/* Workspace Section */}
+          <div className={`transition-all duration-300 ${
+            activeView === 'response' ? 'hidden lg:block' : 'block'
           }`}>
             <div className="mb-6">
               <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
@@ -102,9 +102,9 @@ function Dashboard({ user, onLogout }) {
             />
           </div>
 
-          {/* AI Response Column */}
+          {/* AI Response Section - Now at Bottom */}
           <div className={`transition-all duration-300 ${
-            activeView === 'workspace' ? 'lg:block hidden' : 'block'
+            activeView === 'workspace' ? 'hidden lg:block' : 'block'
           }`}>
             <AIResponseSection
               theme={theme}

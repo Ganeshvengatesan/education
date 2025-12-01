@@ -49,70 +49,50 @@ function MainWorkspace({
           </div>
         </div>
 
-        {/* Upload Tabs */}
-        <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-          <UploadTabs
-            theme={theme}
-            extractedText={extractedText}
-            setExtractedText={setExtractedText}
-            onSendToAI={onSendToAI}
-            onSend={handleSend}
-          />
-        </div>
-
-        {/* Content Preview & AI Settings Grid */}
-        {extractedText.trim() && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Preview Column */}
-            <div className="lg:col-span-2">
-              <ExtractedTextPreview
-                theme={theme}
-                text={extractedText}
-                onClear={() => setExtractedText('')}
-                onSend={handleSend}
-              />
-            </div>
-            
-            {/* Settings Column */}
-            <div className="lg:col-span-1">
-              <AISettings
-                theme={theme}
-                settings={settings}
-                setSettings={setSettings}
-              />
-            </div>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          {/* Left Column: Input/Upload */}
+          <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
+            <UploadTabs
+              theme={theme}
+              extractedText={extractedText}
+              setExtractedText={setExtractedText}
+              onSendToAI={onSendToAI}
+              onSend={handleSend}
+            />
           </div>
-        )}
 
-        {/* Quick Actions */}
-        {!extractedText.trim() && (
-          <div className={`rounded-2xl p-6 border-2 border-dashed ${
-            theme === 'dark' ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-300/50 bg-slate-50/50'
-          }`}>
-            <div className="text-center space-y-3">
-              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-                Get started by uploading content or pasting text above
-              </p>
-              <div className="flex justify-center gap-2 text-xs">
-                <span className={`px-3 py-1.5 rounded-full ${
-                  theme === 'dark' ? 'bg-slate-700/50 text-slate-400' : 'bg-slate-200/50 text-slate-600'
-                }`}>
-                  PDF Upload
-                </span>
-                <span className={`px-3 py-1.5 rounded-full ${
-                  theme === 'dark' ? 'bg-slate-700/50 text-slate-400' : 'bg-slate-200/50 text-slate-600'
-                }`}>
-                  Screenshot
-                </span>
-                <span className={`px-3 py-1.5 rounded-full ${
-                  theme === 'dark' ? 'bg-slate-700/50 text-slate-400' : 'bg-slate-200/50 text-slate-600'
-                }`}>
-                  Text Input
-                </span>
+          {/* Right Column: Preview & Settings */}
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+            {extractedText.trim() ? (
+              <>
+                <ExtractedTextPreview
+                  theme={theme}
+                  text={extractedText}
+                  onClear={() => setExtractedText('')}
+                  onSend={handleSend}
+                />
+                <AISettings
+                  theme={theme}
+                  settings={settings}
+                  setSettings={setSettings}
+                />
+              </>
+            ) : (
+              <div className={`h-full rounded-2xl border-2 border-dashed flex items-center justify-center p-8 ${
+                theme === 'dark' ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-300/50 bg-slate-50/50'
+              }`}>
+                <div className="text-center space-y-3">
+                  <p className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Content preview and settings will appear here after you upload or enter text
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        )}
+
+        </div>
 
       </div>
     </div>
