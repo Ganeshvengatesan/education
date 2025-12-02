@@ -163,17 +163,56 @@ class ApiService {
     return response;
   }
 
-  // AI methods
+  // AI methods - Using Cloudflare Worker (bypasses backend issues)
   async generateAnswer(question, context, answerType) {
-    const response = await this.request('/ai/ask', {
-      method: 'POST',
-      body: JSON.stringify({
-        question,
-        context,
-        answerType,
-      }),
-    });
-    return response;
+    console.log('🌐 Using Cloudflare Worker for AI generation');
+    console.log('📝 Question:', question.substring(0, 100));
+    console.log('🎯 Answer Type:', answerType);
+
+    try {
+      const response = await fetch('https://education.learnwise-ai.workers.dev/api/ask-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          question: question,
+          answerType: answerType || 'explanation'
+        })
+      });
+
+      const data = await response.json();
+
+      console.log('📥 Cloudflare Worker Response:', {
+        status: response.status,
+        ok: response.ok,
+        hasAnswer: !!data.answer
+      });
+
+      if (!response.ok) {
+        console.error('❌ Worker Error:', data);
+        throw new Error(data.error || 'Failed to generate answer from AI worker');
+      }
+
+      if (!data.answer) {
+        throw new Error('No answer received from AI worker');
+      }
+
+      console.log('✅ AI answer received, length:', data.answer.length);
+
+      // Return in format expected by Dashboard
+      return {
+        success: true,
+        data: {
+          answer: data.answer,
+          question: question,
+          answerType: answerType
+        }
+      };
+    } catch (error) {
+      console.error('❌ Cloudflare Worker Error:', error);
+      throw error;
+    }
   }
 
   async getHistory() {
