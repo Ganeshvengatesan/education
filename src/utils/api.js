@@ -19,37 +19,63 @@ class ApiService {
     const token = localStorage.getItem('ai-knowledge-token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔑 Auth token present:', token.substring(0, 20) + '...');
+    } else {
+      console.warn('⚠️ No auth token found in localStorage');
     }
+
+    console.log('📤 API Request:', {
+      method: config.method || 'GET',
+      url: url,
+      hasToken: !!token,
+      headers: Object.keys(config.headers)
+    });
 
     try {
       const response = await fetch(url, config);
       const data = await response.json().catch(() => ({}));
 
+      console.log('📥 API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        hasData: !!data
+      });
+
       if (!response.ok) {
+        console.error('❌ API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data
+        });
+
         // Handle different error types
         if (response.status === 401) {
           // Unauthorized - clear token and redirect to login
           localStorage.removeItem('ai-knowledge-token');
           localStorage.removeItem('ai-knowledge-user');
+          console.warn('🔐 Session expired - tokens cleared');
           throw new Error('Session expired. Please login again.');
         }
-        
+
         const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
         throw new Error(errorMessage);
       }
 
       // Validate response structure
       if (!data || typeof data !== 'object') {
+        console.error('❌ Invalid response format:', data);
         throw new Error('Invalid response format from server');
       }
 
+      console.log('✅ API Request successful');
       return data;
     } catch (error) {
       // Network errors
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         throw new Error('Network error. Please check your connection and try again.');
       }
-      
+
       console.error('API request failed:', error);
       throw error;
     }
@@ -93,7 +119,7 @@ class ApiService {
     formData.append('file', file);
 
     const token = localStorage.getItem('ai-knowledge-token');
-    
+
     try {
       const response = await fetch(`${this.baseURL}/upload/file`, {
         method: 'POST',
@@ -111,7 +137,7 @@ class ApiService {
           localStorage.removeItem('ai-knowledge-user');
           throw new Error('Session expired. Please login again.');
         }
-        
+
         const errorMessage = data.message || data.error || `Upload failed: ${response.status}`;
         throw new Error(errorMessage);
       }
