@@ -17,14 +17,11 @@ function Register({ onLogin }) {
     try {
       const response = await apiService.register(formData);
 
-      // Save token and user data
-      localStorage.setItem('ai-knowledge-token', response.data.token);
+      // Save user data (auth handled via cookies)
       localStorage.setItem('ai-knowledge-user', JSON.stringify(response.data.user));
 
-      // Call parent function
       if (onLogin) onLogin(response.data.user);
 
-      // Navigate to Dashboard
       navigate('/dashboard', { replace: true });
     } catch (error) {
       console.error('Registration error:', error);
@@ -32,31 +29,38 @@ function Register({ onLogin }) {
     } finally {
       setLoading(false);
     }
-  };
+  }; 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-slate-200">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="p-8">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-violet-600 flex items-center justify-center shadow-lg mx-auto">
+              <User className="text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">Create Account</h1>
-            <p className="text-slate-600 mt-2">Join AI Knowledge today</p>
+            <h1 className="mt-4 text-2xl font-bold text-slate-900">Create Account</h1>
+            <p className="mt-2 text-slate-600">Register to get started</p>
           </div>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-600 border border-red-200 text-sm">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleRegister} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Full Name</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Name</label>
               <div className="relative">
                 <User className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
                 <input
                   type="text"
-                  required
-                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
-                  placeholder="John Doe"
+                  value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                  placeholder="Your name"
                 />
               </div>
             </div>
@@ -67,10 +71,11 @@ function Register({ onLogin }) {
                 <Mail className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
                 <input
                   type="email"
-                  required
-                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
-                  placeholder="you@example.com"
+                  value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                  placeholder="your@email.com"
                 />
               </div>
             </div>
@@ -81,26 +86,26 @@ function Register({ onLogin }) {
                 <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
                 <input
                   type="password"
-                  required
-                  minLength="6"
-                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
-                  placeholder="••••••••"
+                  value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                  placeholder="Choose a strong password"
                 />
               </div>
             </div>
 
             <button
               type="submit"
-              className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-xl hover:from-purple-600 hover:to-pink-700 transform hover:scale-105 transition-all duration-200 shadow-lg flex items-center justify-center gap-3"
+              className="w-full py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-bold rounded-xl hover:from-indigo-600 hover:to-violet-700 transform hover:scale-105 transition-all duration-200 shadow-lg"
             >
-              Create Account <ArrowRight className="w-5 h-5" />
+              Create Account
             </button>
           </form>
 
           <p className="text-center mt-6 text-slate-600">
             Already have an account?{' '}
-            <Link to="/login" className="text-purple-600 font-semibold hover:underline">
+            <Link to="/login" className="text-indigo-600 font-semibold hover:underline">
               Sign in
             </Link>
           </p>

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import apiService from '../utils/api';
+import Alert from './Alert';
 
 // Inline SVG Icons (no lucide-react!)
 const ImageIcon = () => (
@@ -20,6 +21,7 @@ function ScreenshotUpload({ theme = 'light', setExtractedText, onSendToAI, extra
   const [question, setQuestion] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [notice, setNotice] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleDragOver = (e) => {
@@ -54,17 +56,30 @@ function ScreenshotUpload({ theme = 'light', setExtractedText, onSendToAI, extra
       const base64 = e.target?.result;
       setImage(base64);
       setIsExtracting(true);
+      setNotice(null);
 
       try {
         const response = await apiService.uploadFile(file);
         if (response.data && response.data.extractedText) {
           setExtractedText(response.data.extractedText);
+          setNotice({
+            type: 'success',
+            title: 'Image processed',
+            message: 'Text extracted successfully from screenshot.',
+          });
         } else {
           throw new Error('No text extracted from image');
         }
       } catch (error) {
         console.error('Image processing error:', error);
-        alert(`Error: ${error.message || 'Failed to extract text from image. Please try again.'}`);
+        const serverMsg = error.response?.data?.message;
+        const serverDetails = error.response?.data?.details;
+        setNotice({
+          type: 'error',
+          title: 'Processing failed',
+          message: serverMsg || error.message || 'Failed to extract text from image. Please try again.',
+          details: typeof serverDetails === 'string' ? serverDetails : undefined,
+        });
         setImage(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -81,6 +96,7 @@ function ScreenshotUpload({ theme = 'light', setExtractedText, onSendToAI, extra
     if (fileInputRef.current) fileInputRef.current.value = '';
     setExtractedText('');
     setQuestion('');
+    setNotice(null);
   };
 
   return (
@@ -122,12 +138,18 @@ function ScreenshotUpload({ theme = 'light', setExtractedText, onSendToAI, extra
               onChange={handleFileSelect}
               className="hidden"
               id="screenshot-input"
+              disabled={isExtracting}
             />
             <label
               htmlFor="screenshot-input"
-              className="inline-block px-8 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-bold text-lg rounded-xl shadow-xl hover:shadow-2xl hover:from-indigo-600 hover:to-violet-700 transform hover:scale-105 transition-all duration-200"
+              className={`inline-block px-8 py-4 font-bold text-lg rounded-xl shadow-xl transform transition-all duration-200 
+                ${isExtracting
+                  ? 'bg-slate-300 text-slate-600 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:shadow-2xl hover:from-indigo-600 hover:to-violet-700 hover:scale-105'
+                }`
+              }
             >
-              Choose Image
+              {isExtracting ? 'Processing…' : 'Choose Image'}
             </label>
           </div>
         </div>
@@ -150,6 +172,16 @@ function ScreenshotUpload({ theme = 'light', setExtractedText, onSendToAI, extra
               <XIcon />
             </button>
           </div>
+
+          {notice && (
+            <Alert
+              type={notice.type}
+              title={notice.title}
+              message={notice.message}
+              details={notice.details}
+              onClose={() => setNotice(null)}
+            />
+          )}
 
           {/* Question Input */}
           <div className={`p-5 rounded-xl border ${theme === 'dark' ? 'bg-slate-800/70 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>

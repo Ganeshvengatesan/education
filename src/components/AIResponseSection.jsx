@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import MarkdownRenderer from './MarkdownRenderer';
+import Alert from './Alert';
 
-function AIResponseSection({ theme = 'light', response = '', isGenerating = false }) {
+function AIResponseSection({ theme = 'light', response = '', isGenerating = false, onRegenerate, onImprove, onContinueChat }) {
+  const [followUp, setFollowUp] = useState('');
+
   const handleCopy = () => {
     navigator.clipboard.writeText(response);
   };
@@ -17,6 +20,30 @@ function AIResponseSection({ theme = 'light', response = '', isGenerating = fals
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  // Basic error inference from response content
+  const parseError = (text) => {
+    if (!text) return null;
+    const t = String(text).trim();
+    const lowered = t.toLowerCase();
+    if (lowered.startsWith('error:') || lowered.includes('**error:**')) {
+      // Extract message after 'Error:' or '**Error:**'
+      const msg = t.replace(/^\*\*?error:\*\*?\s*/i, '');
+      return { title: 'AI response error', message: msg };
+    }
+    // JSON { message, details }
+    try {
+      if (t.startsWith('{') && t.endsWith('}')) {
+        const obj = JSON.parse(t);
+        if (obj.message) {
+          return { title: 'AI response error', message: obj.message, details: obj.details };
+        }
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  const errorInfo = parseError(response);
 
   // SVG Icons (pure, no dependencies)
   const CopyIcon = () => (
@@ -48,6 +75,18 @@ function AIResponseSection({ theme = 'light', response = '', isGenerating = fals
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
   );
+
+  const ChatIcon = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h8m-8 4h6M5 20l2-2h10a2 2 0 002-2V6a2 2 0 00-2-2H7a2 2 0 00-2 2v12z" />
+    </svg>
+  );
+
+  const handleContinue = () => {
+    if (onContinueChat && followUp.trim()) {
+      onContinueChat(followUp);
+    }
+  };
 
   return (
     <div className={`rounded-2xl shadow-lg transition-all duration-300 overflow-hidden sticky top-24 ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
@@ -117,19 +156,57 @@ function AIResponseSection({ theme = 'light', response = '', isGenerating = fals
           </div>
         ) : response ? (
           <div className="space-y-6">
-            <div className={`rounded-xl p-5 max-h-96 overflow-y-auto border ${theme === 'dark' ? 'bg-slate-900/70 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-              <MarkdownRenderer content={response} theme={theme} />
-            </div>
+            {errorInfo ? (
+              <Alert type="error" title={errorInfo.title} message={errorInfo.message} details={errorInfo.details} />
+            ) : (
+              <div className={`rounded-xl p-5 max-h-96 overflow-y-auto border ${theme === 'dark' ? 'bg-slate-900/70 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <MarkdownRenderer content={response} theme={theme} />
+              </div>
+            )}
 
-            <div className="flex gap-3">
-              <button className={`flex-1 py-3 px-5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${theme === 'dark' ? 'bg-slate-700 hover:bg-slate-600 text-slate-100' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'}`}>
-                <RefreshIcon />
-                Regenerate
-              </button>
-              <button className={`flex-1 py-3 px-5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${theme === 'dark' ? 'bg-slate-700 hover:bg-slate-600 text-slate-100' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'}`}>
-                <FileTextIcon />
-                Improve
-              </button>
+            {/* Follow-up input */}
+            <div className="space-y-3">
+              <label className={`block text-xs font-semibold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                Ask a follow-up question
+              </label>
+              <input
+                type="text"
+                value={followUp}
+                onChange={(e) => setFollowUp(e.target.value)}
+                placeholder="e.g., Clarify the key points, give examples, or compare concepts"
+                className={`w-full px-4 py-3 rounded-lg border transition-all focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                  theme === 'dark'
+                    ? 'bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-400'
+                    : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'
+                }`}
+              />
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => onRegenerate && onRegenerate()}
+                  className={`flex-1 py-3 px-5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${theme === 'dark' ? 'bg-slate-700 hover:bg-slate-600 text-slate-100' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'}`}
+                >
+                  <RefreshIcon />
+                  Regenerate
+                </button>
+                <button
+                  onClick={() => onImprove && onImprove()}
+                  className={`flex-1 py-3 px-5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${theme === 'dark' ? 'bg-slate-700 hover:bg-slate-600 text-slate-100' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'}`}
+                >
+                  <FileTextIcon />
+                  Improve
+                </button>
+                <button
+                  onClick={handleContinue}
+                  disabled={!followUp.trim()}
+                  className={`flex-1 py-3 px-5 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${
+                    theme === 'dark' ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <ChatIcon />
+                  Continue Chat
+                </button>
+              </div>
             </div>
           </div>
         ) : (

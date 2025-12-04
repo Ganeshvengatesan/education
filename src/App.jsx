@@ -11,6 +11,7 @@ import {
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import apiService from './utils/api';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -32,6 +33,21 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!user) {
+      (async () => {
+        try {
+          const res = await apiService.me();
+          if (res?.data?.user) {
+            setUser(res.data.user);
+          }
+        } catch (error) {
+          // Not authenticated or /auth/me unavailable; ignore
+        }
+      })();
+    }
+  }, [user]);
+
+  useEffect(() => {
     if (user) {
       localStorage.setItem('ai-knowledge-user', JSON.stringify(user));
     } else {
@@ -43,9 +59,14 @@ function App() {
     setUser(userData);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await apiService.logout();
+    } catch (e) {
+      // ignore logout errors
+    }
     setUser(null);
-    localStorage.removeItem('ai-knowledge-token');
+    localStorage.removeItem('ai-knowledge-user');
   };
 
   const isAuthenticated = () => {

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import MainWorkspace from '../components/MainWorkspace';
 import AIResponseSection from '../components/AIResponseSection';
+import Alert from '../components/Alert';
 import apiService from '../utils/api';
 
 function Dashboard({ user, onLogout }) {
@@ -10,12 +11,23 @@ function Dashboard({ user, onLogout }) {
   const [aiResponse, setAiResponse] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeView, setActiveView] = useState('workspace');
+  const [flash, setFlash] = useState('');
+
+  useEffect(() => {
+    const msg = sessionStorage.getItem('flash-success');
+    if (msg) {
+      setFlash(msg);
+      sessionStorage.removeItem('flash-success');
+      const t = setTimeout(() => setFlash(''), 4000);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   const handleSendToAI = async (question, text, settings) => {
     if (!text.trim()) {
-      alert('Please provide some content to analyze');
+      setFlash('Please provide some content to analyze');
       return;
     }
 
@@ -26,7 +38,6 @@ function Dashboard({ user, onLogout }) {
       const response = await apiService.generateAnswer(question, text, settings.answerType);
       if (response.data && response.data.answer) {
         setAiResponse(response.data.answer);
-        setActiveView('response');
       } else {
         throw new Error('No answer received from AI');
       }
@@ -34,9 +45,29 @@ function Dashboard({ user, onLogout }) {
       console.error('AI generation error:', error);
       const errorMessage = error.message || 'Failed to generate AI response. Please try again.';
       setAiResponse(`**Error:** ${errorMessage}\n\nPlease check your connection and try again.`);
-      setActiveView('response');
     } finally {
       setIsGenerating(false);
+      setActiveView('response');
+    }
+  };
+
+  const handleContinueChat = async (followUp) => {
+    setIsGenerating(true);
+    try {
+      const context = `${extractedText}\n\nPrevious answer:\n${aiResponse}`.trim();
+      const response = await apiService.generateAnswer(followUp, context, 'explanation');
+      if (response.data && response.data.answer) {
+        setAiResponse(response.data.answer);
+      } else {
+        throw new Error('No answer received from AI');
+      }
+    } catch (error) {
+      console.error('Continue chat error:', error);
+      const errorMessage = error.message || 'Failed to generate AI response.';
+      setAiResponse(`**Error:** ${errorMessage}`);
+    } finally {
+      setIsGenerating(false);
+      setActiveView('response');
     }
   };
 
@@ -53,71 +84,46 @@ function Dashboard({ user, onLogout }) {
         onViewChange={setActiveView}
       />
 
-      <main className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* Mobile View Toggle */}
-        <div className="lg:hidden mb-6">
-          <div className="flex bg-white/80 dark:bg-slate-800/80 rounded-2xl p-1 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
-            <button
-              onClick={() => setActiveView('workspace')}
-              className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all ${
-                activeView === 'workspace'
-                  ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Workspace
-            </button>
-            <button
-              onClick={() => setActiveView('response')}
-              className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all ${
-                activeView === 'response'
-                  ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              AI Response
-            </button>
+      <main className="container mx-auto px-4 py-6 max-w-7xl space-y-8">
+        {flash && (
+          <div className="mb-2">
+            <Alert type="success" title="Success" message={flash} onClose={() => setFlash('')} />
           </div>
-        </div>
+        )}
 
-        <div className="space-y-8">
-          {/* Workspace Section */}
-          <div className={`transition-all duration-300 ${
-            activeView === 'response' ? 'hidden lg:block' : 'block'
-          }`}>
-            <div className="mb-6">
-              <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                Welcome back, {user.name || user.email}!
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-2 text-lg">
-                Transform your content with AI-powered insights
-              </p>
-            </div>
-            
-            <MainWorkspace
-              theme={theme}
-              extractedText={extractedText}
-              setExtractedText={setExtractedText}
-              onSendToAI={handleSendToAI}
-            />
+        {/* Workspace Section - Top */}
+        <section aria-labelledby="workspace-title">
+          <div className="mb-6">
+            <h1 id="workspace-title" className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+              Welcome back, {user.name || user.email}!
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-2 text-lg">
+              Transform your content with AI-powered insights
+            </p>
           </div>
+          <MainWorkspace
+            theme={theme}
+            extractedText={extractedText}
+            setExtractedText={setExtractedText}
+            onSendToAI={handleSendToAI}
+          />
+        </section>
 
-          {/* AI Response Section - Now at Bottom */}
-          <div className={`transition-all duration-300 ${
-            activeView === 'workspace' ? 'hidden lg:block' : 'block'
-          }`}>
-            <AIResponseSection
-              theme={theme}
-              response={aiResponse}
-              isGenerating={isGenerating}
-              onRegenerate={() => activeView === 'response' && aiResponse && handleSendToAI(
-                "Please regenerate the response",
-                extractedText,
-                { answerType: 'explanation' }
-              )}
-            />
-          </div>
-        </div>
+        {/* AI Response Section - Bottom */}
+        <section aria-labelledby="ai-response-title">
+          <h2 id="ai-response-title" className="sr-only">AI Response</h2>
+          <AIResponseSection
+            theme={theme}
+            response={aiResponse}
+            isGenerating={isGenerating}
+            onRegenerate={() => aiResponse && handleSendToAI(
+              'Please regenerate the response',
+              extractedText,
+              { answerType: 'explanation' }
+            )}
+            onContinueChat={handleContinueChat}
+          />
+        </section>
       </main>
     </div>
   );

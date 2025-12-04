@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Mail, Lock, LogIn } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiService from '../utils/api';
+import Alert from '../components/Alert';
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState('');
@@ -20,14 +21,15 @@ function Login({ onLogin }) {
     try {
       const response = await apiService.login({ email, password });
 
-      // Save token and user data
-      localStorage.setItem('ai-knowledge-token', response.data.token);
+      // Save user data (auth handled via cookies)
       localStorage.setItem('ai-knowledge-user', JSON.stringify(response.data.user));
 
-      // Call parent function
       if (onLogin) onLogin(response.data.user);
 
-      // Navigate to Dashboard
+      // Flash success message to show on Dashboard
+      const name = response.data.user?.name || response.data.user?.email || 'User';
+      sessionStorage.setItem('flash-success', `Logged in successfully. Welcome, ${name}!`);
+
       navigate('/dashboard', { replace: true });
     } catch (error) {
       console.error('Login error:', error);
@@ -35,48 +37,49 @@ function Login({ onLogin }) {
     } finally {
       setLoading(false);
     }
-  };
+  }; 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-slate-200">
-
+    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="p-8">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <LogIn className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-violet-600 flex items-center justify-center shadow-lg mx-auto">
+              <LogIn className="text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">Welcome Back</h1>
-            <p className="text-slate-600 mt-2">Sign in to continue</p>
+            <h1 className="mt-4 text-2xl font-bold text-slate-900">Welcome Back</h1>
+            <p className="mt-2 text-slate-600">Sign in to continue</p>
           </div>
 
           {error && (
-            <div className="mb-5 p-4 bg-red-50 border border-red-300 text-red-700 rounded-xl text-sm text-center">
-              {error}
-            </div>
+            <Alert type="error" title="Login failed" message={error} />
           )}
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
                 <input
+                  id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
                   placeholder="ganesh@gmail.com"
+                  aria-invalid={!!error}
+                  aria-describedby={error ? 'login-error' : undefined}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
                 <input
+                  id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -89,9 +92,10 @@ function Login({ onLogin }) {
 
             <button
               type="submit"
-              className="w-full py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-bold rounded-xl hover:from-indigo-600 hover:to-violet-700 transform hover:scale-105 transition-all duration-200 shadow-lg"
+              disabled={loading}
+              className="w-full py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-bold rounded-xl hover:from-indigo-600 hover:to-violet-700 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Sign In
+              {loading ? 'Signing In…' : 'Sign In'}
             </button>
           </form>
 

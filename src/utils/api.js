@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://education-backend-l1sy.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 class ApiService {
   constructor() {
@@ -12,22 +12,13 @@ class ApiService {
         'Content-Type': 'application/json',
         ...options.headers,
       },
+      credentials: 'include',
       ...options,
     };
-
-    // Add auth token if available
-    const token = localStorage.getItem('ai-knowledge-token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('🔑 Auth token present:', token.substring(0, 20) + '...');
-    } else {
-      console.warn('⚠️ No auth token found in localStorage');
-    }
 
     console.log('📤 API Request:', {
       method: config.method || 'GET',
       url: url,
-      hasToken: !!token,
       headers: Object.keys(config.headers)
     });
 
@@ -49,12 +40,20 @@ class ApiService {
           data: data
         });
 
-        // Handle different error types
         if (response.status === 401) {
-          // Unauthorized - clear token and redirect to login
-          localStorage.removeItem('ai-knowledge-token');
+          const refreshed = await this.refreshToken().catch(() => false);
+          if (refreshed) {
+            const retryRes = await fetch(url, config);
+            const retryData = await retryRes.json().catch(() => ({}));
+            if (!retryRes.ok) {
+              const retryErrorMessage = retryData.message || retryData.error || `HTTP error! status: ${retryRes.status}`;
+              throw new Error(retryErrorMessage);
+            }
+            return retryData;
+          }
+
           localStorage.removeItem('ai-knowledge-user');
-          console.warn('🔐 Session expired - tokens cleared');
+          console.warn('🔐 Session expired - user cleared');
           throw new Error('Session expired. Please login again.');
         }
 
@@ -62,7 +61,6 @@ class ApiService {
         throw new Error(errorMessage);
       }
 
-      // Validate response structure
       if (!data || typeof data !== 'object') {
         console.error('❌ Invalid response format:', data);
         throw new Error('Invalid response format from server');
@@ -71,7 +69,6 @@ class ApiService {
       console.log('✅ API Request successful');
       return data;
     } catch (error) {
-      // Network errors
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         throw new Error('Network error. Please check your connection and try again.');
       }
@@ -113,19 +110,39 @@ class ApiService {
     return response;
   }
 
+  async logout() {
+    const response = await this.request('/auth/logout', {
+      method: 'POST',
+    });
+    return response;
+  }
+
+  async refreshToken() {
+    try {
+      const res = await fetch(`${this.baseURL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async me() {
+    const response = await this.request('/auth/me');
+    return response;
+  }
+
   // Upload methods
   async uploadFile(file) {
     const formData = new FormData();
     formData.append('file', file);
 
-    const token = localStorage.getItem('ai-knowledge-token');
-
     try {
       const response = await fetch(`${this.baseURL}/upload/file`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: 'include',
         body: formData,
       });
 
@@ -133,7 +150,21 @@ class ApiService {
 
       if (!response.ok) {
         if (response.status === 401) {
-          localStorage.removeItem('ai-knowledge-token');
+          const refreshed = await this.refreshToken().catch(() => false);
+          if (refreshed) {
+            const retryResponse = await fetch(`${this.baseURL}/upload/file`, {
+              method: 'POST',
+              credentials: 'include',
+              body: formData,
+            });
+            const retryData = await retryResponse.json().catch(() => ({}));
+            if (!retryResponse.ok) {
+              const retryErrorMessage = retryData.message || retryData.error || `Upload failed: ${retryResponse.status}`;
+              throw new Error(retryErrorMessage);
+            }
+            return retryData;
+          }
+
           localStorage.removeItem('ai-knowledge-user');
           throw new Error('Session expired. Please login again.');
         }
@@ -163,55 +194,82 @@ class ApiService {
     return response;
   }
 
-  // AI methods - Using Cloudflare Worker (bypasses backend issues)
+  // AI methods - Using backend Groq endpoint (with auth)
   async generateAnswer(question, context, answerType) {
-    console.log('🌐 Using Cloudflare Worker for AI generation');
+    console.log('🤖 Using backend for AI generation');
     console.log('📝 Question:', question.substring(0, 100));
     console.log('🎯 Answer Type:', answerType);
 
     try {
-      const response = await fetch('https://education.learnwise-ai.workers.dev/api/ask-ai', {
+      const response = await this.request('/ai/ask', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
-          question: question,
+          question,
+          context: context || '',
           answerType: answerType || 'explanation'
         })
       });
 
-      const data = await response.json();
-
-      console.log('📥 Cloudflare Worker Response:', {
-        status: response.status,
-        ok: response.ok,
-        hasAnswer: !!data.answer
-      });
-
-      if (!response.ok) {
-        console.error('❌ Worker Error:', data);
-        throw new Error(data.error || 'Failed to generate answer from AI worker');
+      if (!response?.data?.answer) {
+        throw new Error('No answer received from backend');
       }
 
-      if (!data.answer) {
-        throw new Error('No answer received from AI worker');
-      }
+      console.log('✅ AI answer received from backend, length:', response.data.answer.length);
 
-      console.log('✅ AI answer received, length:', data.answer.length);
-
-      // Return in format expected by Dashboard
       return {
         success: true,
         data: {
-          answer: data.answer,
-          question: question,
-          answerType: answerType
+          answer: response.data.answer,
+          question,
+          answerType
         }
       };
-    } catch (error) {
-      console.error('❌ Cloudflare Worker Error:', error);
-      throw error;
+    } catch (backendError) {
+      console.warn('⚠️ Backend AI failed, falling back to Worker:', backendError?.message || backendError);
+
+      try {
+        const workerRes = await fetch('https://education.learnwise-ai.workers.dev/api/ask-ai', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            question: question,
+            answerType: answerType || 'explanation'
+          })
+        });
+
+        const data = await workerRes.json();
+
+        console.log('📥 Cloudflare Worker Response:', {
+          status: workerRes.status,
+          ok: workerRes.ok,
+          hasAnswer: !!data.answer
+        });
+
+        if (!workerRes.ok) {
+          console.error('❌ Worker Error:', data);
+          throw new Error(data.error || 'Failed to generate answer from AI worker');
+        }
+
+        if (!data.answer) {
+          throw new Error('No answer received from AI worker');
+        }
+
+        console.log('✅ AI answer received from Worker, length:', data.answer.length);
+
+        return {
+          success: true,
+          data: {
+            answer: data.answer,
+            question: question,
+            answerType: answerType
+          }
+        };
+      } catch (workerError) {
+        console.error('❌ Cloudflare Worker Error:', workerError);
+        throw workerError;
+      }
     }
   }
 

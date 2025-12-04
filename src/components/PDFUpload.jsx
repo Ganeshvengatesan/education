@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import apiService from '../utils/api';
+import Alert from './Alert';
 
 // Inline SVG Icons (no lucide-react!)
 const UploadIcon = () => (
@@ -26,6 +27,7 @@ function PDFUpload({ theme = 'light', setExtractedText }) {
   const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [notice, setNotice] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleDragOver = (e) => {
@@ -56,6 +58,7 @@ function PDFUpload({ theme = 'light', setExtractedText }) {
   };
 
   const handleFile = async (selectedFile) => {
+    setNotice(null);
     setFile(selectedFile);
     setIsUploading(true);
 
@@ -63,12 +66,24 @@ function PDFUpload({ theme = 'light', setExtractedText }) {
       const response = await apiService.uploadFile(selectedFile);
       if (response.data && response.data.extractedText) {
         setExtractedText(response.data.extractedText);
+        setNotice({
+          type: 'success',
+          title: 'Upload complete',
+          message: 'PDF processed successfully. Text extracted and ready to analyze.',
+        });
       } else {
         throw new Error('No text extracted from file');
       }
     } catch (error) {
       console.error('File upload error:', error);
-      alert(`Error: ${error.message || 'Failed to extract text from file. Please try again.'}`);
+      const serverMsg = error.response?.data?.message;
+      const serverDetails = error.response?.data?.details;
+      setNotice({
+        type: 'error',
+        title: 'Upload failed',
+        message: serverMsg || error.message || 'Failed to extract text from file. Please try again.',
+        details: typeof serverDetails === 'string' ? serverDetails : undefined,
+      });
       setFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -84,6 +99,7 @@ function PDFUpload({ theme = 'light', setExtractedText }) {
       fileInputRef.current.value = '';
     }
     setExtractedText('');
+    setNotice(null);
   };
 
   return (
@@ -124,15 +140,31 @@ function PDFUpload({ theme = 'light', setExtractedText }) {
             onChange={handleFileSelect}
             className="hidden"
             id="pdf-upload-input"
+            disabled={isUploading}
           />
           <label
             htmlFor="pdf-upload-input"
-            className="inline-block px-8 py-3.5 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-indigo-600 hover:to-violet-700 transform hover:scale-105 transition-all duration-200"
+            className={`inline-block px-8 py-3.5 font-semibold rounded-xl shadow-lg transform transition-all duration-200 
+              ${isUploading
+                ? 'bg-slate-300 text-slate-600 cursor-not-allowed'
+                : 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:shadow-xl hover:from-indigo-600 hover:to-violet-700 hover:scale-105'
+              }`
+            }
           >
-            Choose PDF File
+            {isUploading ? 'Uploading…' : 'Choose PDF File'}
           </label>
         </div>
       </div>
+
+      {notice && (
+        <Alert
+          type={notice.type}
+          title={notice.title}
+          message={notice.message}
+          details={notice.details}
+          onClose={() => setNotice(null)}
+        />
+      )}
 
       {/* Selected File Preview */}
       {file && (
